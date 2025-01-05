@@ -1,0 +1,6 @@
+numpy==1.26.4
+open3d==0.18.0
+scipy==1.13.1
+pyrender==0.1.45
+trimesh==4.5.3
+pillow==11.1.0
