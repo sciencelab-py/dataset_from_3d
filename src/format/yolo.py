@@ -7,7 +7,7 @@ import cv2
 class YOLODatasetGenerator(DatasetGenerator):
     def __init__(self, output_dir, image_size=(800, 600)):
         super().__init__(output_dir, image_size)
-        self.categories = set()
+        self.categories = list()
         self.image_id = 0
         
         # Tạo thư mục images và labels
@@ -46,8 +46,9 @@ class YOLODatasetGenerator(DatasetGenerator):
         # Tạo và lưu annotation theo format YOLO
         with open(label_path, 'w') as f:
             for obj in objects_metadata:
-                self.categories.add(obj['object_type'])
-                category_id = sorted(list(self.categories)).index(obj['object_type'])
+                if obj['object_type'] not in self.categories:
+                    self.categories.append(obj['object_type'])
+                category_id = self.categories.index(obj['object_type'])
                 
                 # Tính toán bbox
                 obb = obj['obb']
@@ -87,7 +88,7 @@ class YOLODatasetGenerator(DatasetGenerator):
             'test': 'images/test',    # path to test images
             
             'nc': len(self.categories),  # number of classes
-            'names': sorted(list(self.categories))  # class names
+            'names': self.categories  # class names
         }
         
         # Convert to YAML format
@@ -106,5 +107,5 @@ class YOLODatasetGenerator(DatasetGenerator):
         # Save class names to classes.txt
         classes_path = os.path.join(self.output_dir, 'classes.txt')
         with open(classes_path, 'w') as f:
-            for category in sorted(list(self.categories)):
+            for category in self.categories:
                 f.write(f"{category}\n")

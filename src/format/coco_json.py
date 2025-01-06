@@ -4,16 +4,13 @@ import json
 import numpy as np
 import os
 from PIL import Image
-import pyrender
-import trimesh
-import cv2
 
 class COCODatasetGenerator(DatasetGenerator):
     def __init__(self, output_dir, image_size=(800, 600)):
         super().__init__(output_dir, image_size)
         self.annotations = []
         self.images = []
-        self.categories = set()
+        self.categories = list()
         self.image_id = 0
         self.annotation_id = 0
         
@@ -53,7 +50,9 @@ class COCODatasetGenerator(DatasetGenerator):
         
         # Tạo annotations cho mỗi object
         for obj in objects_metadata:
-            self.categories.add(obj['object_type'])
+            if obj['object_type'] not in self.categories:
+                self.categories.append(obj['object_type'])
+            category_id = self.categories.index(obj['object_type'])
             
             # Tính bbox từ projected points
 
@@ -85,7 +84,7 @@ class COCODatasetGenerator(DatasetGenerator):
             self.annotations.append({
                 'id': self.annotation_id,
                 'image_id': self.image_id,
-                'category_id': list(self.categories).index(obj['object_type']),
+                'category_id': category_id,
                 'bbox': bbox,
                 'area': bbox[2] * bbox[3],
                 'iscrowd': 0
@@ -93,31 +92,13 @@ class COCODatasetGenerator(DatasetGenerator):
             self.annotation_id += 1
 
         self.image_id += 1
-    
-    def _convert_to_yolo_format(self, bbox, image_size):
-        """Chuyển đổi bbox sang format YOLO (x_center, y_center, width, height)"""
-        x_min, y_min, x_max, y_max = bbox
-        
-        # Tính toán các giá trị theo format YOLO
-        x_center = (x_min + x_max) / 2
-        y_center = (y_min + y_max) / 2
-        width = x_max - x_min
-        height = y_max - y_min
-        
-        # Normalize về khoảng [0, 1]
-        x_center /= image_size[0]
-        y_center /= image_size[1]
-        width /= image_size[0]
-        height /= image_size[1]
-        
-        return [x_center, y_center, width, height]
 
     def save_metadata(self):
         """Save COCO format dataset to JSON file"""
         # Convert categories to list format
         categories = [
             {'id': i, 'name': category}
-            for i, category in enumerate(sorted(self.categories))
+            for i, category in self.categories
         ]
         
         # Create COCO format dataset
