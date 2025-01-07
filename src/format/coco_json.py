@@ -65,7 +65,7 @@ class COCODatasetGenerator(DatasetGenerator):
             if points_2d is None:
                 continue
                 
-            box2d_coords = self._calculate_2d_obb(points_2d)
+            box2d_coords = self._calculate_2d_obb_corners(points_2d)
 
             x_min = min(p[0] for p in box2d_coords)
             y_min = min(p[1] for p in box2d_coords)

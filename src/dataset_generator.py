@@ -80,7 +80,7 @@ class DatasetGenerator(ABC):
             if points_2d is None:
                 continue
             
-            bbox_2d = self._calculate_2d_obb(points_2d)
+            bbox_2d = self._calculate_2d_obb_corners(points_2d)
             # Vẽ box và label
             self._draw_box(vis_image, bbox_2d, points_2d, obj['object_type'])
         
@@ -104,7 +104,7 @@ class DatasetGenerator(ABC):
         screen_y = h - (h/2 * p[1] + h/2)  # Map [-1,1] to [0,height] with top-left origin
         
         return np.vstack((screen_x, screen_y)).T
-
+    
     def _calculate_2d_obb(self, points_2d):
         # Chuyển points thành numpy array để tối ưu tính toán
         points_array = np.array(points_2d)
@@ -136,6 +136,13 @@ class DatasetGenerator(ABC):
         
         # Tính điểm trung tâm trong hệ tọa độ gốc
         center = tuple(mean)
+
+        return center[0], center[1], width, height, angle
+
+    def _calculate_2d_obb_corners(self, points_2d):
+        """Tính các điểm góc của OBB"""
+        center_x, center_y, width, height, angle = self._calculate_2d_obb(points_2d)
+        center = np.array([center_x, center_y])
 
         # Tạo các điểm góc của OBB
         corners = np.array([

@@ -1,4 +1,5 @@
 from .format.yolo import YOLODatasetGenerator
+from .format.yolo_obb import YOLOOBBDatasetGenerator
 from .format.coco_json import COCODatasetGenerator
 
 class DatasetGeneratorFactory:
@@ -24,6 +25,8 @@ class DatasetGeneratorFactory:
         
         if format_type == 'yolo':
             return YOLODatasetGenerator(output_dir, image_size)
+        elif format_type == 'yolo_obb':
+            return YOLOOBBDatasetGenerator(output_dir, image_size)
         elif format_type == 'coco':
             return COCODatasetGenerator(output_dir, image_size)
         else:

@@ -13,7 +13,7 @@
     "output": {
         "quantity": 5,
         "output_dir": ".\\output_dataset",
-        "format": "yolo"
+        "format": "yolo_obb"
     },
     "scene_generation": {
         "min_objects": 2,

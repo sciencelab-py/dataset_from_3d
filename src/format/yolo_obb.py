@@ -3,29 +3,30 @@ import os
 import numpy as np
 from PIL import Image
 
-class YOLODatasetGenerator(DatasetGenerator):
+class YOLOOBBDatasetGenerator(DatasetGenerator):
     def __init__(self, output_dir, image_size=(800, 600)):
         super().__init__(output_dir, image_size)
         self.categories = list()
         self.image_id = 0
         
-        # Tạo thư mục images và labels
+        # Create images and labels directories
         self.images_dir = os.path.join(output_dir, 'images')
         self.labels_dir = os.path.join(output_dir, 'labels')
         os.makedirs(self.images_dir, exist_ok=True)
         os.makedirs(self.labels_dir, exist_ok=True)
         
     def process_scene(self, scene_data, visualize=False):
-        """Process scene và tạo YOLO annotations"""
+        """Process scene and create YOLO-OBB points-based annotations"""
         scene, objects_metadata, camera_pose, projection = scene_data
+        
         # Render scene
         color, depth = self.render_scene(scene)
         
-        # Process ảnh
+        # Process image
         image = color.astype(float) / 255.0
         image = self.add_noise_and_augmentation(image)
         
-        # Lưu ảnh
+        # Save image
         image_filename = f'image_{self.image_id:06d}.png'
         label_filename = f'image_{self.image_id:06d}.txt'
         
@@ -35,59 +36,50 @@ class YOLODatasetGenerator(DatasetGenerator):
         Image.fromarray((image * 255).astype(np.uint8)).save(image_path)
 
         if visualize:
-            # Tạo ảnh với bounding boxes để visualize
             vis_image = self.visualize_bounding_boxes(color, objects_metadata, camera_pose, projection)
             vis_filename = f'vis_{self.image_id:06d}.png'
             vis_path = os.path.join(self.images_dir, vis_filename)
             Image.fromarray(vis_image).save(vis_path)
             
-        # Tạo và lưu annotation theo format YOLO
+        # Create and save YOLO-OBB points format annotations
         with open(label_path, 'w') as f:
             for obj in objects_metadata:
                 if obj['object_type'] not in self.categories:
                     self.categories.append(obj['object_type'])
                 category_id = self.categories.index(obj['object_type'])
                 
-                # Tính toán bbox
+                # Get OBB vertices
                 obb = obj['obb']
-                # corners = self._get_box_corners(obb['center'], obb['extents'], obb['transform'])
                 corners = np.array(obb['vertices'])
                 
-                # Project sang 2D
+                # Project to 2D
                 points_2d = self._project_points(corners, camera_pose, projection)
                 if points_2d is None:
                     continue
                     
+                # Calculate OBB corners in normalized coordinates
                 box2d_coords = self._calculate_2d_obb_corners(points_2d)
                 
-                # Tính bbox theo format YOLO (x_center, y_center, width, height)
-                x_min = max(0, min(p[0] for p in box2d_coords))
-                y_min = max(0, min(p[1] for p in box2d_coords))
-                x_max = min(self.image_size[0], max(p[0] for p in box2d_coords))
-                y_max = min(self.image_size[1], max(p[1] for p in box2d_coords))
+                # Normalize coordinates
+                box2d_coords[:, 0] /= self.image_size[0]
+                box2d_coords[:, 1] /= self.image_size[1]
                 
-                # Normalize về khoảng [0, 1]
-                x_center = (x_min + x_max) / (2 * self.image_size[0])
-                y_center = (y_min + y_max) / (2 * self.image_size[1])
-                width = (x_max - x_min) / self.image_size[0]
-                height = (y_max - y_min) / self.image_size[1]
-                
-                # Ghi annotation theo format YOLO:
-                # <class_id> <x_center> <y_center> <width> <height>
-                f.write(f"{category_id} {x_center:.6f} {y_center:.6f} {width:.6f} {height:.6f}\n")
+                # Write YOLO-OBB points format:
+                # <class_id> <x1> <y1> <x2> <y2> <x3> <y3> <x4> <y4>
+                coords_str = ' '.join([f'{x:.6f}' for x in box2d_coords.flatten()])
+                f.write(f"{category_id} {coords_str}\n")
         
         self.image_id += 1
     
     def save_metadata(self):
-        """Lưu file data.yaml chứa thông tin về classes và paths"""
+        """Save data.yaml containing classes and paths"""
         yaml_content = {
             'path': self.output_dir,
-            'train': 'images/train',  # path to train images
-            'val': 'images/val',      # path to validation images
-            'test': 'images/test',    # path to test images
-            
-            'nc': len(self.categories),  # number of classes
-            'names': self.categories  # class names
+            'train': 'images/train',
+            'val': 'images/val',
+            'test': 'images/test',
+            'nc': len(self.categories),
+            'names': self.categories
         }
         
         # Convert to YAML format
@@ -103,7 +95,7 @@ class YOLODatasetGenerator(DatasetGenerator):
         with open(yaml_path, 'w') as f:
             f.write(yaml_str)
         
-        # Save class names to classes.txt
+        # Save class names
         classes_path = os.path.join(self.output_dir, 'classes.txt')
         with open(classes_path, 'w') as f:
             for category in self.categories:
