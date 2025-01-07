@@ -11,13 +11,13 @@
         "height": 640
     },
     "output": {
-        "quantity": 5,
+        "quantity": 300,
         "output_dir": ".\\output_dataset",
         "format": "yolo_obb"
     },
     "scene_generation": {
         "min_objects": 2,
-        "max_objects": 10,
+        "max_objects": 5,
         "scale_range": {
             "min": 0.8,
             "max": 1.2
