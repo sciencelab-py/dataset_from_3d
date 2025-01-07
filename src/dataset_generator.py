@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import pyrender
 import random
+from .config import Config
 from numpy.linalg import inv
 from abc import ABC, abstractmethod
 
@@ -10,6 +11,7 @@ class DatasetGenerator(ABC):
     def __init__(self, output_dir, image_size=(800, 600)):
         self.output_dir = output_dir
         self.image_size = image_size
+        self.config = Config.get_instance()
         os.makedirs(output_dir, exist_ok=True)
         
     @abstractmethod
@@ -24,21 +26,37 @@ class DatasetGenerator(ABC):
     
     def add_noise_and_augmentation(self, image):
         """Thêm nhiễu và augmentation cho ảnh"""
+        augmentation_config = self.config.augmentation
+
         # Gaussian noise
-        noise = np.random.normal(0, 0.05, image.shape)
+        noise = np.random.normal(0, augmentation_config["noise_sigma"], image.shape)
         image = np.clip(image + noise, 0, 1)
         
         # Điều chỉnh độ sáng
-        brightness = random.uniform(0.7, 1.3)
-        image = np.clip(image * brightness, 0, 1)
+        min_brightness = augmentation_config["brightness_range"]["min"]
+        max_brightness = augmentation_config["brightness_range"]["max"]
+        brightness = random.uniform(min_brightness, max_brightness)
+        MIN_PIXEL_VALUE = 0
+        MAX_PIXEL_VALUE = 1
+        image = np.clip(image * brightness, MIN_PIXEL_VALUE, MAX_PIXEL_VALUE)
         
+        # Constants for contrast adjustment
+        MIDDLE_INTENSITY = 0.5
+        MIN_PIXEL_VALUE = 0
+        MAX_PIXEL_VALUE = 1
+
         # Điều chỉnh độ tương phản
-        contrast = random.uniform(0.8, 1.2)
-        image = np.clip((image - 0.5) * contrast + 0.5, 0, 1)
+        min_contrast = augmentation_config["contrast_range"]["min"]
+        max_contrast = augmentation_config["contrast_range"]["max"]
+        contrast = random.uniform(min_contrast, max_contrast)
+        image = np.clip((image - MIDDLE_INTENSITY) * contrast + MIDDLE_INTENSITY, MIN_PIXEL_VALUE, MAX_PIXEL_VALUE)
         
-        # Mô phỏng thiếu sáng
-        if random.random() < 0.3:
-            image = np.power(image, random.uniform(1.0, 2.0))
+        # Mô phỏng thiếu sáng với gamma correction
+        if random.random() < augmentation_config["gamma_probability"]:
+            min_gamma = augmentation_config["gamma_range"]["min"]
+            max_gamma = augmentation_config["gamma_range"]["max"]
+            gamma = random.uniform(min_gamma, max_gamma)
+            image = np.power(image, gamma)
         
         return image
     

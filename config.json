@@ -1,0 +1,72 @@
+{
+    "models": {
+        "blue_sample": ".\\element\\am-5401_blue\\am-5401_blue.obj",
+        "red_sample": ".\\element\\am-5401_red\\am-5401_red.obj",
+        "yellow_sample": ".\\element\\am-5401_yellow\\am-5401_yellow.obj",
+        "blue_specimen": ".\\element\\blue_specimen\\blue_specimen.obj",
+        "red_specimen": ".\\element\\red_specimen\\red_specimen.obj"
+    },
+    "image_size": {
+        "width": 640,
+        "height": 640
+    },
+    "output": {
+        "quantity": 5,
+        "output_dir": ".\\output_dataset",
+        "format": "yolo"
+    },
+    "scene_generation": {
+        "min_objects": 2,
+        "max_objects": 10,
+        "scale_range": {
+            "min": 0.8,
+            "max": 1.2
+        },
+        "translation_range": {
+            "min": -0.5,
+            "max": 0.5
+        }
+    },
+    "camera": {
+        "fov": 60,
+        "distance_weight": 0.75,
+        "phi_range": {
+            "min": 30,
+            "max": 60
+        }
+    },
+    "lighting": {
+        "num_lights": {
+            "min": 2,
+            "max": 4
+        },
+        "light_color": {
+            "min": 0.8,
+            "max": 1.0
+        },
+        "light_intensity": {
+            "min": 1.0,
+            "max": 2.0
+        },
+        "light_position_range": {
+            "min": -2,
+            "max": 2
+        }
+    },
+    "augmentation": {
+        "noise_sigma": 0.05,
+        "brightness_range": {
+            "min": 0.7,
+            "max": 1.3
+        },
+        "contrast_range": {
+            "min": 0.8,
+            "max": 1.2
+        },
+        "gamma_range": {
+            "min": 1.0,
+            "max": 2.0
+        },
+        "gamma_probability": 0.3
+    }
+}

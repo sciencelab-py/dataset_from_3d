@@ -1,50 +1,53 @@
 import os
 from src.scence_generator import SceneGenerator
-from src.format.coco_json import COCODatasetGenerator
-from src.format.yolo import YOLODatasetGenerator
+from src.dataset_generator_factory import DatasetGeneratorFactory
+from src.config import Config
 import traceback
 
-def main():
-    # Define paths to 3D model files
-    model_paths = {
-        'blue_sample': ".\\element\\am-5401_blue\\am-5401_blue.obj",
-        'yellow_sample': ".\\element\\am-5401_yellow\\am-5401_yellow.obj",
-        'red_sample': ".\\element\\am-5401_red\\am-5401_red.obj",
-        'blue_specimen': ".\\element\\blue_specimen\\blue_specimen.obj",
-        'red_specimen': ".\\element\\red_specimen\\red_specimen.obj",
-    }
+def main(config: Config):   
+    # Use models from config
+    model_paths = config.models
+
+    # Get image size from config
+    image_size = (config.image_size['width'], config.image_size['height'])
+
+    # Get output directory from config
+    output_dir = config.output['output_dir']
 
     # Initialize generators
-    scene_gen = SceneGenerator(model_paths, image_size=(800, 600))
-    dataset_gen = YOLODatasetGenerator(output_dir='output_dataset', image_size=(800, 600))
+    scene_gen = SceneGenerator(model_paths, image_size=image_size)
+    dataset_gen = DatasetGeneratorFactory.create_generator(
+        config.output['format'], output_dir, image_size=image_size
+    )
 
     # Generate multiple scenes
-    num_scenes = 3  # Adjust number of scenes as needed
+    num_scenes = config.output['quantity']
     
     print(f"Generating {num_scenes} scenes...")
     for i in range(num_scenes):
         if i % 10 == 0:
             print(f"Processing scene {i}/{num_scenes}")
             
-        # Generate a new scene
-        scene_data = scene_gen.generate_scene(min_objects=2, max_objects=10)
+        # Generate a new scene using config parameters
+        scene_data = scene_gen.generate_scene(
+            min_objects=config.scene_generation['min_objects'],
+            max_objects=config.scene_generation['max_objects']
+        )
         
         # Process the scene and generate dataset entries
-        dataset_gen.process_scene(scene_data, visualize=True)
-
-        # Optional: Visualize the scene (uncomment to view)
-        # pyrender.Viewer(scene_data[0])
+        dataset_gen.process_scene(scene_data)
 
     # Save the dataset metadata
     dataset_gen.save_metadata()
     print("Dataset generation complete!")
 
 if __name__ == "__main__":
+    config = Config.get_instance()
     # Create output directory if it doesn't exist
-    os.makedirs('output_dataset', exist_ok=True)
+    os.makedirs(config.output['output_dir'], exist_ok=True)
     
     try:
-        main()
+        main(config)
     except Exception as e:
         print(f"An error occurred: {str(e)}")
         print("Traceback:")
