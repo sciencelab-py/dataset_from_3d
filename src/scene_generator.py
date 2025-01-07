@@ -2,16 +2,56 @@ import numpy as np
 import random
 import pyrender
 import trimesh
+from .camera_positioner import CameraPositioner
 from .config import Config
 from scipy.spatial.transform import Rotation
+from abc import ABC, abstractmethod
+from typing import Tuple, List, Dict, Any
 
-class SceneGenerator:
-    def __init__(self, model_paths, image_size=(800, 600)):
+class BaseSceneGenerator(ABC):
+    def __init__(self, model_paths: Dict[str, str], image_size: Tuple[int, int]=(800, 600)):
         self.model_paths = model_paths
         self.image_size = image_size
         self.meshes = self._load_meshes()
         self.config = Config.get_instance()
+        self.camera_positioner = CameraPositioner()
+
+    @abstractmethod
+    def generate_scene(self, min_objects=2, max_objects=5) -> Tuple[pyrender.Scene, List[Dict[str, Any]], np.ndarray, np.ndarray]:
+        """Abstract method that each specific generator must implement"""
+        raise NotImplementedError
+    
+    @abstractmethod
+    def _get_camera_parameters(self, center: float, scene_size: float) -> Dict[str, Any]:
+        """Each generator should implement its own camera parameters"""
+        pass
+
+    def calculate_optimal_camera_position(self, scene):
+        """Base implementation of camera positioning"""
+        bounds = self.calculate_scene_bounds(scene)
+        center = (bounds[0] + bounds[1]) / 2
+        size = np.linalg.norm(bounds[1] - bounds[0])
         
+        # Get base camera parameters
+        params = self._get_camera_parameters(center, size)
+        
+        # Calculate camera position
+        camera_position = self.camera_positioner.calculate_camera_position(
+            center=params['center'],
+            distance=params['distance'],
+            phi=params['phi'],
+            theta=params['theta']
+        )
+        
+        # Calculate camera rotation
+        rotation = self.camera_positioner.calculate_camera_rotation(
+            camera_position, 
+            params['look_at_point']
+        )
+        
+        # Create final camera pose
+        return self.camera_positioner.create_camera_pose(camera_position, rotation)
+      
     def _load_meshes(self):
         """Load tất cả models"""
         meshes = {}
@@ -27,7 +67,7 @@ class SceneGenerator:
             meshes[name] = mesh
         return meshes
     
-    def apply_random_transformations(self, mesh):
+    def apply_random_transformations(self, mesh, translation_range=None):
         """Áp dụng các biến đổi ngẫu nhiên cho mesh"""     
         mesh = mesh.copy()
         scene_config = self.config.scene_generation
@@ -47,9 +87,15 @@ class SceneGenerator:
         mesh.apply_transform(rotation_matrix)
         
         # Translation ngẫu nhiên
+        if translation_range is None:
+            translation_range = {
+                "min": scene_config["translation_range"]["min"],
+                "max": scene_config["translation_range"]["max"]
+            }
+        
         translation = np.random.uniform(
-            scene_config["translation_range"]["min"], 
-            scene_config["translation_range"]["max"], 
+            translation_range["min"], 
+            translation_range["max"], 
             size=3
         )
         translation_matrix = np.eye(4)
@@ -92,108 +138,19 @@ class SceneGenerator:
         margin = (bounds_max - bounds_min) * 0.1  # 10% margin
         
         return np.array([bounds_min - margin, bounds_max + margin])
-
-    def calculate_optimal_camera_position(self, scene):
-        """Tính toán vị trí camera tối ưu để hiển thị tất cả objects"""
-        bounds = self.calculate_scene_bounds(scene)
-        center = (bounds[0] + bounds[1]) / 2
-        size = np.linalg.norm(bounds[1] - bounds[0])
-        
-        # Get camera config
+    
+    def _setup_camera(self, scene):
         camera_config = self.config.camera
-        
-        # Khoảng cách camera để đảm bảo tất cả objects nằm vừa trong viewport
-        distance = size * camera_config["distance_weight"]
-        
-        # Tạo vị trí camera ngẫu nhiên nhưng giữ khoảng cách không đổi
-        theta = np.random.uniform(0, 2 * np.pi)
-        # Giới hạn góc phi theo config
-        phi_min = np.radians(camera_config["phi_range"]["min"])
-        phi_max = np.radians(camera_config["phi_range"]["max"])
-        phi = np.random.uniform(phi_min, phi_max)
-        
-        camera_position = center + distance * np.array([
-            np.sin(phi) * np.cos(theta),
-            np.sin(phi) * np.sin(theta),
-            np.cos(phi)
-        ])
-        
-        # Tạo ma trận look_at
-        camera_pose = np.eye(4)
-        camera_pose[:3, 3] = camera_position
-        
-        # Hướng camera về tâm scene
-        direction = center - camera_position
-        direction = direction / np.linalg.norm(direction)
-        
-        # Tính vector up (không song song với direction)
-        up = np.array([0, 0, 1])
-        if np.abs(np.dot(up, direction)) > 0.9:
-            up = np.array([0, 1, 0])
-            
-        # Tạo ma trận rotation cho camera
-        right = np.cross(direction, up)
-        right = right / np.linalg.norm(right)
-        up = np.cross(right, direction)
-        up = up / np.linalg.norm(up)
-        
-        rotation = np.eye(3)
-        rotation[:, 0] = right
-        rotation[:, 1] = up
-        rotation[:, 2] = -direction
-        
-        camera_pose[:3, :3] = rotation
-        
-        return camera_pose
-
-    def generate_scene(self, min_objects=2, max_objects=5):
-        """Tạo một scene mới"""
-        # Set random background color with values between 0 and 1
-        scene = pyrender.Scene(bg_color=np.random.uniform(low=0.0, high=1.0, size=3))
-        objects_metadata = []
-        
-        num_objects = random.randint(min_objects, max_objects)
-        
-        # Thêm objects
-        for i in range(num_objects):
-            # Chọn ngẫu nhiên một model
-            object_type = random.choice(list(self.meshes.keys()))
-            mesh_copy = self.meshes[object_type].copy()
-            # Áp dụng transforms
-            mesh_copy, transform_metadata = self.apply_random_transformations(mesh_copy)
-
-            # Tính oriented bounding box
-            obb = mesh_copy.bounding_box_oriented
-
-            mesh = pyrender.Mesh.from_trimesh(mesh_copy)
-            node = scene.add(mesh)
-            
-            # Lưu metadata của object
-            objects_metadata.append({
-                'object_id': i,
-                'object_type': object_type,
-                'transformations': transform_metadata,
-                'obb': {
-                    'center': obb.centroid.tolist(),
-                    'extents': obb.extents.tolist(),
-                    'transform': obb.transform.tolist(),
-                    'vertices': obb.vertices.tolist()
-                }
-            })
-
-        # Get camera config
-        camera_config = self.config.camera
-        camera_fov = np.radians(camera_config["fov"])
-        
-        # Thiết lập camera
-        camera = pyrender.PerspectiveCamera(yfov=camera_fov, aspectRatio=self.image_size[0] / self.image_size[1])
+        camera = pyrender.PerspectiveCamera(
+            yfov=np.radians(camera_config["fov"]), 
+            aspectRatio=self.image_size[0] / self.image_size[1]
+        )
         camera_pose = self.calculate_optimal_camera_position(scene)
-        camera_node = scene.add(camera, pose=camera_pose)
-        
-        # Thêm ánh sáng
-        self._add_lights(scene)
-        
-        return scene, objects_metadata, camera_pose, camera.get_projection_matrix()
+        scene.add(camera, pose=camera_pose)
+        return {
+            'pose': camera_pose,
+            'projection': camera.get_projection_matrix()
+        }
     
     def _add_lights(self, scene):
         """Thêm ánh sáng vào scene"""

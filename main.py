@@ -1,5 +1,5 @@
 import os
-from src.scence_generator import SceneGenerator
+from src.scene_generator_factory import SceneGeneratorFactory
 from src.dataset_generator_factory import DatasetGeneratorFactory
 from src.config import Config
 import traceback
@@ -15,7 +15,13 @@ def main(config: Config):
     output_dir = config.output['output_dir']
 
     # Initialize generators
-    scene_gen = SceneGenerator(model_paths, image_size=image_size)
+    factory = SceneGeneratorFactory()
+
+    # Chọn generator dựa trên config
+    # random_clutter, partially_occluded, multi_level
+    scene_gen = factory.create_generator(config.scene_generation['type'], model_paths)
+
+    # Tạo scene
     dataset_gen = DatasetGeneratorFactory.create_generator(
         config.output['format'], output_dir, image_size=image_size
     )

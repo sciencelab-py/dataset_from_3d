@@ -11,11 +11,12 @@
         "height": 640
     },
     "output": {
-        "quantity": 300,
+        "quantity": 3,
         "output_dir": ".\\output_dataset",
         "format": "yolo_obb"
     },
     "scene_generation": {
+        "type": "random_clutter",
         "min_objects": 2,
         "max_objects": 5,
         "scale_range": {
@@ -29,7 +30,7 @@
     },
     "camera": {
         "fov": 60,
-        "distance_weight": 0.75,
+        "distance_weight": 1,
         "phi_range": {
             "min": 30,
             "max": 60
