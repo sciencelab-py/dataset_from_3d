@@ -11,8 +11,9 @@ class RandomClutterSceneGenerator(BaseSceneGenerator):
         super().__init__(model_paths, image_size)
 
         # Define base plane for objects
-        self.plane_size = 0.5  # Base plane size
+        self.plane_size = 0.3  # Base plane size
         self.base_height = 0
+        self.height_variation = 0.2  # Random height variance for objects
         self.max_attempts = 50  # Maximum attempts to place each object
  
     def generate_scene(self, min_objects=2, max_objects=5):
@@ -33,7 +34,7 @@ class RandomClutterSceneGenerator(BaseSceneGenerator):
                 # Define random position on the base plane
                 translation_range = {
                     "min": [-self.plane_size/2, -self.plane_size/2, self.base_height],
-                    "max": [self.plane_size/2, self.plane_size/2, self.base_height + 0.5]
+                    "max": [self.plane_size/2, self.plane_size/2, self.base_height + self.height_variation]
                 }
                 
                 mesh_copy, transform_metadata = self.apply_random_transformations(
@@ -77,9 +78,7 @@ class RandomClutterSceneGenerator(BaseSceneGenerator):
         # Setup camera and lights
         camera = self._setup_camera(scene)
         self._add_lights(scene)
-        
-        pyrender.Viewer(scene)
-        
+                
         return scene, objects_metadata, camera['pose'], camera['projection']
     
     def _get_camera_parameters(self, center: float, scene_size: float) -> Dict[str, Any]:
