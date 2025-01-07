@@ -3,16 +3,15 @@ from src.scence_generator import SceneGenerator
 from src.format.coco_json import COCODatasetGenerator
 from src.format.yolo import YOLODatasetGenerator
 import traceback
-import pyrender
 
 def main():
     # Define paths to 3D model files
     model_paths = {
-        'blue_sample': "D:\\Projects\\ScienceLab\\ftc25-test\\element\\am-5401_blue\\am-5401_blue.obj",
-        'yellow_sample': "D:\\Projects\\ScienceLab\\ftc25-test\\element\\am-5401_yellow\\am-5401_yellow.obj",
-        'red_sample': "D:\\Projects\\ScienceLab\\ftc25-test\\element\\am-5401_red\\am-5401_red.obj",
-        'blue_specimen': "D:\\Projects\\ScienceLab\\ftc25-test\\element\\blue_specimen\\blue_specimen.obj",
-        'red_specimen': "D:\\Projects\\ScienceLab\\ftc25-test\\element\\red_specimen\\red_specimen.obj",
+        'blue_sample': ".\\element\\am-5401_blue\\am-5401_blue.obj",
+        'yellow_sample': ".\\element\\am-5401_yellow\\am-5401_yellow.obj",
+        'red_sample': ".\\element\\am-5401_red\\am-5401_red.obj",
+        'blue_specimen': ".\\element\\blue_specimen\\blue_specimen.obj",
+        'red_specimen': ".\\element\\red_specimen\\red_specimen.obj",
     }
 
     # Initialize generators
@@ -28,10 +27,10 @@ def main():
             print(f"Processing scene {i}/{num_scenes}")
             
         # Generate a new scene
-        scene_data = scene_gen.generate_scene(min_objects=2, max_objects=5)
+        scene_data = scene_gen.generate_scene(min_objects=2, max_objects=10)
         
         # Process the scene and generate dataset entries
-        dataset_gen.process_scene(scene_data)
+        dataset_gen.process_scene(scene_data, visualize=True)
 
         # Optional: Visualize the scene (uncomment to view)
         # pyrender.Viewer(scene_data[0])

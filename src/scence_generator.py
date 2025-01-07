@@ -26,7 +26,9 @@ class SceneGenerator:
         return meshes
     
     def apply_random_transformations(self, mesh):
-        """Áp dụng các biến đổi ngẫu nhiên cho mesh"""        
+        """Áp dụng các biến đổi ngẫu nhiên cho mesh"""     
+        mesh = mesh.copy()
+
         # Scale ngẫu nhiên
         scale = random.uniform(0.8, 1.2)
         scale_matrix = np.eye(4)
@@ -159,7 +161,8 @@ class SceneGenerator:
                 'obb': {
                     'center': obb.centroid.tolist(),
                     'extents': obb.extents.tolist(),
-                    'transform': obb.transform.tolist()
+                    'transform': obb.transform.tolist(),
+                    'vertices': obb.vertices.tolist()
                 }
             })
         

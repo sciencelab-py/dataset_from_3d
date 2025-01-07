@@ -55,8 +55,8 @@ class DatasetGenerator(ABC):
         for obj in objects_metadata:
             obb = obj['obb']
             # Tạo các điểm của box trong local space
-            corners = self._get_box_corners(obb['extents'], obb['transform'])
-            
+            corners = np.array(obb['vertices'])
+                        
             # Project sang 2D
             points_2d = self._project_points(corners, camera_pose, projection)
             if points_2d is None:
@@ -67,28 +67,6 @@ class DatasetGenerator(ABC):
             self._draw_box(vis_image, bbox_2d, points_2d, obj['object_type'])
         
         return vis_image
-
-    def _get_box_corners(self, extents, transform):
-        """
-        Tạo các điểm góc của box trong local space
-        """
-        # Tạo các điểm góc normalized
-        corners = np.array([
-            [ 1,  1,  1],  # right, top, front
-            [-1,  1,  1],  # left, top, front
-            [-1, -1,  1],  # left, bottom, front
-            [ 1, -1,  1],  # right, bottom, front
-            [ 1,  1, -1],  # right, top, back
-            [-1,  1, -1],  # left, top, back
-            [-1, -1, -1],  # left, bottom, back
-            [ 1, -1, -1],  # right, bottom, back
-        ], dtype=np.float32)
-        transform = np.array(transform)
-        
-        # Scale theo extents và transform về center
-        corners = corners * (np.array(extents) / 2.0)
-        corners_h = np.column_stack((corners, np.ones(len(corners))))
-        return (transform @ corners_h.T).T[:, :3]
     
     def _project_points(self, points, view, projection):
         """Project các điểm 3D thành 2D"""

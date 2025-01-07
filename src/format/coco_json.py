@@ -58,7 +58,7 @@ class COCODatasetGenerator(DatasetGenerator):
 
             obb = obj['obb']
             # Tạo các điểm của box trong local space
-            corners = self._get_box_corners(obb['extents'], obb['transform'])
+            corners = self._get_box_corners(obb['center'], obb['extents'], obb['transform'])
 
             # Project sang 2D
             points_2d = self._project_points(corners, camera_pose, projection)

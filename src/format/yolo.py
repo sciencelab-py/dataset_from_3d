@@ -2,7 +2,6 @@ from ..dataset_generator import DatasetGenerator
 import os
 import numpy as np
 from PIL import Image
-import cv2
 
 class YOLODatasetGenerator(DatasetGenerator):
     def __init__(self, output_dir, image_size=(800, 600)):
@@ -19,7 +18,6 @@ class YOLODatasetGenerator(DatasetGenerator):
     def process_scene(self, scene_data, visualize=False):
         """Process scene và tạo YOLO annotations"""
         scene, objects_metadata, camera_pose, projection = scene_data
-        
         # Render scene
         color, depth = self.render_scene(scene)
         
@@ -52,7 +50,8 @@ class YOLODatasetGenerator(DatasetGenerator):
                 
                 # Tính toán bbox
                 obb = obj['obb']
-                corners = self._get_box_corners(obb['extents'], obb['transform'])
+                # corners = self._get_box_corners(obb['center'], obb['extents'], obb['transform'])
+                corners = np.array(obb['vertices'])
                 
                 # Project sang 2D
                 points_2d = self._project_points(corners, camera_pose, projection)
